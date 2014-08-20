@@ -28,35 +28,13 @@
 class OSystem_POSIX : public OSystem_SDL {
 public:
 	// Let the subclasses be able to change _baseConfigName in the constructor
-	OSystem_POSIX(Common::String baseConfigName = ".residualvmrc");
+	OSystem_POSIX();
 	virtual ~OSystem_POSIX() {}
-
-	virtual bool displayLogFile();
 
 	virtual void init();
 	virtual void initBackend();
 
 protected:
-	/**
-	 * Base string for creating the default path and filename for the
-	 * configuration file. This allows the Mac OS X subclass to override
-	 * the config file path and name.
-	 */
-	Common::String _baseConfigName;
-
-	/**
-	 * The path of the currently open log file, if any.
-	 *
-	 * @note This is currently a string and not an FSNode for simplicity;
-	 * e.g. we don't need to include fs.h here, and currently the
-	 * only use of this value is to use it to open the log file in an
-	 * editor; for that, we need it only as a string anyway.
-	 */
-	Common::String _logFilePath;
-
-	virtual Common::String getDefaultConfigFileName();
-
-	virtual Common::WriteStream *createLogFile();
 };
 
 #endif

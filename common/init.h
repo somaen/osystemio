@@ -20,40 +20,12 @@
  *
  */
 
-#define FORBIDDEN_SYMBOL_EXCEPTION_getenv
-#define FORBIDDEN_SYMBOL_EXCEPTION_mkdir
-#define FORBIDDEN_SYMBOL_EXCEPTION_exit
-#define FORBIDDEN_SYMBOL_EXCEPTION_unistd_h
-#define FORBIDDEN_SYMBOL_EXCEPTION_time_h	//On IRIX, sys/stat.h includes sys/time.h
+#ifndef COMMON_INIT_H
+#define COMMON_INIT_H
 
-#include "common/scummsys.h"
+namespace Common {
+void initOSystem();
+void deinitOSystem();
+};
 
-#ifdef POSIX
-
-#include "backends/platform/sdl/posix/posix.h"
-#include "backends/fs/posix/posix-fs-factory.h"
-
-#include <errno.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
-
-OSystem_POSIX::OSystem_POSIX() {}
-
-void OSystem_POSIX::init() {
-	// Initialze File System Factory
-	_fsFactory = new POSIXFilesystemFactory();
-
-	// Invoke parent implementation of this method
-	OSystem_SDL::init();
-}
-
-void OSystem_POSIX::initBackend() {
-	init();
-	// Invoke parent implementation of this method
-	OSystem_SDL::initBackend();
-}
-
-
-#endif
+#endif /* defined(__OSystemIO__init__) */
