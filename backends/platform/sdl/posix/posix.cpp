@@ -31,9 +31,7 @@
 #ifdef POSIX
 
 #include "backends/platform/sdl/posix/posix.h"
-#include "backends/saves/posix/posix-saves.h"
 #include "backends/fs/posix/posix-fs-factory.h"
-#include "backends/taskbar/unity/unity-taskbar.h"
 
 #include <errno.h>
 #include <sys/stat.h>
@@ -60,24 +58,10 @@ void OSystem_POSIX::init() {
 }
 
 void OSystem_POSIX::initBackend() {
-	// Create the savefile manager
-	if (_savefileManager == 0)
-		_savefileManager = new POSIXSaveFileManager();
-
 	// Invoke parent implementation of this method
 	OSystem_SDL::initBackend();
-
-#if defined(USE_TASKBAR) && defined(USE_UNITY)
-	// Register the taskbar manager as an event source (this is necessary for the glib event loop to be run)
-	_eventManager->getEventDispatcher()->registerSource((UnityTaskbarManager *)_taskbarManager, false);
-#endif
 }
 
-bool OSystem_POSIX::hasFeature(Feature f) {
-	if (f == kFeatureDisplayLogFile)
-		return true;
-	return OSystem_SDL::hasFeature(f);
-}
 
 Common::String OSystem_POSIX::getDefaultConfigFileName() {
 	Common::String configFile;

@@ -29,26 +29,7 @@
 #endif
 
 #include "backends/platform/sdl/sdl.h"
-#include "common/config-manager.h"
-#include "gui/EventRecorder.h"
-#include "common/taskbar.h"
 #include "common/textconsole.h"
-
-#include "backends/saves/default/default-saves.h"
-
-// Audio CD support was removed with SDL 1.3
-#if SDL_VERSION_ATLEAST(1, 3, 0)
-#include "backends/audiocd/default/default-audiocd.h"
-#else
-#include "backends/audiocd/sdl/sdl-audiocd.h"
-#endif
-
-#include "backends/events/sdl/sdl-events.h"
-#include "backends/mutex/sdl/sdl-mutex.h"
-#include "backends/timer/sdl/sdl-timer.h"
-#include "backends/graphics/surfacesdl/surfacesdl-graphics.h"
-
-#include "icons/residualvm.xpm"
 
 #include <time.h>	// for getTimeAndDate()
 
@@ -60,186 +41,19 @@
 
 OSystem_SDL::OSystem_SDL()
 	:
-	_inited(false),
-	_initedSDL(false),
-	_logger(0),
-	_mixerManager(0),
-	_eventSource(0) {
+	_inited(false) {}
 
-}
-
-OSystem_SDL::~OSystem_SDL() {
-	SDL_ShowCursor(SDL_ENABLE);
-
-	// Delete the various managers here. Note that the ModularBackend
-	// destructor would also take care of this for us. However, various
-	// of our managers must be deleted *before* we call SDL_Quit().
-	// Hence, we perform the destruction on our own.
-	delete _savefileManager;
-	_savefileManager = 0;
-	if (_graphicsManager) {
-		dynamic_cast<SdlGraphicsManager *>(_graphicsManager)->deactivateManager();
-	}
-	delete _graphicsManager;
-	_graphicsManager = 0;
-	delete _eventManager;
-	_eventManager = 0;
-	delete _eventSource;
-	_eventSource = 0;
-	delete _audiocdManager;
-	_audiocdManager = 0;
-	delete _mixerManager;
-	_mixerManager = 0;
-
-#ifdef ENABLE_EVENTRECORDER
-	// HACK HACK HACK
-	// This is nasty.
-	delete g_eventRec.getTimerManager();
-#else
-	delete _timerManager;
-#endif
-
-	_timerManager = 0;
-	delete _mutexManager;
-	_mutexManager = 0;
-
-	delete _logger;
-	_logger = 0;
-
-	SDL_Quit();
-}
-
-void OSystem_SDL::init() {
-	// Initialize SDL
-	initSDL();
-
-	// Enable unicode support if possible
-	SDL_EnableUNICODE(1);
-
-	// Disable OS cursor
-	SDL_ShowCursor(SDL_DISABLE);
-
-	if (!_logger)
-		_logger = new Backends::Log::Log(this);
-
-	if (_logger) {
-		Common::WriteStream *logFile = createLogFile();
-		if (logFile)
-			_logger->open(logFile);
-	}
-
-
-	// Creates the early needed managers, if they don't exist yet
-	// (we check for this to allow subclasses to provide their own).
-	if (_mutexManager == 0)
-		_mutexManager = new SdlMutexManager();
-
-#if defined(USE_TASKBAR)
-	if (_taskbarManager == 0)
-		_taskbarManager = new Common::TaskbarManager();
-#endif
-
-}
+void OSystem_SDL::init() {}
 
 void OSystem_SDL::initBackend() {
 	// Check if backend has not been initialized
 	assert(!_inited);
 
-	const int maxNameLen = 20;
-	char sdlDriverName[maxNameLen];
-	sdlDriverName[0] = '\0';
-	SDL_VideoDriverName(sdlDriverName, maxNameLen);
-	// Using printf rather than debug() here as debug()/logging
-	// is not active by this point.
-	debug(1, "Using SDL Video Driver \"%s\"", sdlDriverName);
-
-	// Create the default event source, in case a custom backend
-	// manager didn't provide one yet.
-	if (_eventSource == 0)
-		_eventSource = new SdlEventSource();
-
-	if (_graphicsManager == 0) {
-		if (_graphicsManager == 0) {
-			_graphicsManager = new SurfaceSdlGraphicsManager(_eventSource);
-		}
-	}
-
-	if (_savefileManager == 0)
-		_savefileManager = new DefaultSaveFileManager();
-
-	if (_mixerManager == 0) {
-		_mixerManager = new SdlMixerManager();
-		// Setup and start mixer
-		_mixerManager->init();
-	}
-
-#ifdef ENABLE_EVENTRECORDER
-	g_eventRec.registerMixerManager(_mixerManager);
-
-	g_eventRec.registerTimerManager(new SdlTimerManager());
-#else
-	if (_timerManager == 0)
-		_timerManager = new SdlTimerManager();
-#endif
-
-	if (_audiocdManager == 0) {
-		// Audio CD support was removed with SDL 1.3
-#if SDL_VERSION_ATLEAST(1, 3, 0)
-		_audiocdManager = new DefaultAudioCDManager();
-#else
-		_audiocdManager = new SdlAudioCDManager();
-#endif
-
-	}
-
-	// Setup a custom program icon.
-	setupIcon();
-
 	_inited = true;
 
 	ModularBackend::initBackend();
-
-	// We have to initialize the graphics manager before the event manager
-	// so the virtual keyboard can be initialized, but we have to add the
-	// graphics manager as an event observer after initializing the event
-	// manager.
-	dynamic_cast<SdlGraphicsManager *>(_graphicsManager)->activateManager();
 }
 
-#if defined(USE_TASKBAR)
-void OSystem_SDL::engineInit() {
-	// Add the started engine to the list of recent tasks
-	_taskbarManager->addRecent(ConfMan.getActiveDomainName(), ConfMan.get("description"));
-
-	// Set the overlay icon the current running engine
-	_taskbarManager->setOverlayIcon(ConfMan.getActiveDomainName(), ConfMan.get("description"));
-}
-
-void OSystem_SDL::engineDone() {
-	// Remove overlay icon
-	_taskbarManager->setOverlayIcon("", "");
-}
-#endif
-
-void OSystem_SDL::initSDL() {
-	// Check if SDL has not been initialized
-	if (!_initedSDL) {
-		// We always initialize the video subsystem because we will need it to
-		// be initialized before the graphics managers to retrieve the desktop
-		// resolution, for example. WebOS also requires this initialization
-		// or otherwise the application won't start.
-		uint32 sdlFlags = SDL_INIT_VIDEO;
-
-		if (ConfMan.hasKey("disable_sdl_parachute"))
-			sdlFlags |= SDL_INIT_NOPARACHUTE;
-
-		// Initialize SDL (SDL Subsystems are initiliazed in the corresponding sdl managers)
-		if (SDL_Init(sdlFlags) == -1)
-			error("Could not initialize SDL: %s", SDL_GetError());
-
-		_initedSDL = true;
-	}
-}
 
 void OSystem_SDL::addSysArchivesToSearchSet(Common::SearchSet &s, int priority) {
 
@@ -254,24 +68,6 @@ void OSystem_SDL::addSysArchivesToSearchSet(Common::SearchSet &s, int priority) 
 
 }
 
-void OSystem_SDL::setWindowCaption(const char *caption) {
-	Common::String cap;
-	byte c;
-
-	// The string caption is supposed to be in LATIN-1 encoding.
-	// SDL expects UTF-8. So we perform the conversion here.
-	while ((c = *(const byte *)caption++)) {
-		if (c < 0x80)
-			cap += c;
-		else {
-			cap += 0xC0 | (c >> 6);
-			cap += 0x80 | (c & 0x3F);
-		}
-	}
-
-	SDL_WM_SetCaption(cap.c_str(), cap.c_str());
-}
-
 void OSystem_SDL::quit() {
 	delete this;
 	exit(0);
@@ -281,7 +77,6 @@ void OSystem_SDL::fatalError() {
 	delete this;
 	exit(1);
 }
-
 
 void OSystem_SDL::logMessage(LogMessageType::Type type, const char *message) {
 	// First log to stdout/stderr
@@ -294,10 +89,6 @@ void OSystem_SDL::logMessage(LogMessageType::Type type, const char *message) {
 
 	fputs(message, output);
 	fflush(output);
-
-	// Then log into file (via the logger)
-	if (_logger)
-		_logger->print(message);
 
 	// Finally, some Windows / WinCE specific logging code.
 #if defined( USE_WINDBG )
@@ -321,138 +112,14 @@ void OSystem_SDL::logMessage(LogMessageType::Type type, const char *message) {
 #endif
 }
 
-Common::String OSystem_SDL::getSystemLanguage() const {
-#if defined(USE_DETECTLANG) && !defined(_WIN32_WCE)
-#ifdef WIN32
-	// We can not use "setlocale" (at least not for MSVC builds), since it
-	// will return locales like: "English_USA.1252", thus we need a special
-	// way to determine the locale string for Win32.
-	char langName[9];
-	char ctryName[9];
-
-	const LCID languageIdentifier = GetThreadLocale();
-
-	if (GetLocaleInfo(languageIdentifier, LOCALE_SISO639LANGNAME, langName, sizeof(langName)) != 0 &&
-		GetLocaleInfo(languageIdentifier, LOCALE_SISO3166CTRYNAME, ctryName, sizeof(ctryName)) != 0) {
-		Common::String localeName = langName;
-		localeName += "_";
-		localeName += ctryName;
-
-		return localeName;
-	} else {
-		return ModularBackend::getSystemLanguage();
-	}
-#else // WIN32
-	// Activating current locale settings
-	const Common::String locale = setlocale(LC_ALL, "");
- 
-	// Restore default C locale to prevent issues with
-	// portability of sscanf(), atof(), etc.
-	// See bug #3615148
-	setlocale(LC_ALL, "C");
-
-	// Detect the language from the locale
-	if (locale.empty()) {
-		return ModularBackend::getSystemLanguage();
-	} else {
-		int length = 0;
-
-		// Strip out additional information, like
-		// ".UTF-8" or the like. We do this, since
-		// our translation languages are usually
-		// specified without any charset information.
-		for (int size = locale.size(); length < size; ++length) {
-			// TODO: Check whether "@" should really be checked
-			// here.
-			if (locale[length] == '.' || locale[length] == ' ' || locale[length] == '@')
-				break;
-		}
-
-		return Common::String(locale.c_str(), length);
-	}
-#endif // WIN32
-#else // USE_DETECTLANG
-	return ModularBackend::getSystemLanguage();
-#endif // USE_DETECTLANG
-}
-
-void OSystem_SDL::setupIcon() {
-	int x, y, w, h, ncols, nbytes, i;
-	unsigned int rgba[256];
-	unsigned int *icon;
-
-	if (sscanf(scummvm_icon[0], "%d %d %d %d", &w, &h, &ncols, &nbytes) != 4) {
-		warning("Wrong format of scummvm_icon[0] (%s)", scummvm_icon[0]);
-
-		return;
-	}
-	if ((w > 512) || (h > 512) || (ncols > 255) || (nbytes > 1)) {
-		warning("Could not load the built-in icon (%d %d %d %d)", w, h, ncols, nbytes);
-		return;
-	}
-	icon = (unsigned int*)malloc(w*h*sizeof(unsigned int));
-	if (!icon) {
-		warning("Could not allocate temp storage for the built-in icon");
-		return;
-	}
-
-	for (i = 0; i < ncols; i++) {
-		unsigned char code;
-		char color[32];
-		memset(color, 0, sizeof(color));
-		unsigned int col;
-		if (sscanf(scummvm_icon[1 + i], "%c c %s", &code, color) != 2) {
-			warning("Wrong format of scummvm_icon[%d] (%s)", 1 + i, scummvm_icon[1 + i]);
-		}
-		if (!strcmp(color, "None"))
-			col = 0x00000000;
-		else if (!strcmp(color, "black"))
-			col = 0xFF000000;
-		else if (color[0] == '#') {
-			if (sscanf(color + 1, "%06x", &col) != 1) {
-				warning("Wrong format of color (%s)", color + 1);
-			}
-			col |= 0xFF000000;
-		} else {
-			warning("Could not load the built-in icon (%d %s - %s) ", code, color, scummvm_icon[1 + i]);
-			free(icon);
-			return;
-		}
-
-		rgba[code] = col;
-	}
-	for (y = 0; y < h; y++) {
-		const char *line = scummvm_icon[1 + ncols + y];
-		for (x = 0; x < w; x++) {
-			icon[x + w * y] = rgba[(int)line[x]];
-		}
-	}
-
-	SDL_Surface *sdl_surf = SDL_CreateRGBSurfaceFrom(icon, w, h, 32, w * 4, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF000000);
-	if (!sdl_surf) {
-		warning("SDL_CreateRGBSurfaceFrom(icon) failed");
-	}
-	SDL_WM_SetIcon(sdl_surf, NULL);
-	SDL_FreeSurface(sdl_surf);
-	free(icon);
-}
-
-
 uint32 OSystem_SDL::getMillis(bool skipRecord) {
-	uint32 millis = SDL_GetTicks();
-
-#ifdef ENABLE_EVENTRECORDER
-	g_eventRec.processMillis(millis, skipRecord);
-#endif
+	uint32 millis = 0;//SDL_GetTicks();
 
 	return millis;
 }
 
 void OSystem_SDL::delayMillis(uint msecs) {
-#ifdef ENABLE_EVENTRECORDER
-	if (!g_eventRec.processDelayMillis())
-#endif
-		SDL_Delay(msecs);
+//	SDL_Delay(msecs);
 }
 
 void OSystem_SDL::getTimeAndDate(TimeDate &td) const {
@@ -467,25 +134,3 @@ void OSystem_SDL::getTimeAndDate(TimeDate &td) const {
 	td.tm_wday = t.tm_wday;
 }
 
-Audio::Mixer *OSystem_SDL::getMixer() {
-	assert(_mixerManager);
-	return getMixerManager()->getMixer();
-}
-
-SdlMixerManager *OSystem_SDL::getMixerManager() {
-	assert(_mixerManager);
-
-#ifdef ENABLE_EVENTRECORDER
-	return g_eventRec.getMixerManager();
-#else
-	return _mixerManager;
-#endif
-}
-
-Common::TimerManager *OSystem_SDL::getTimerManager() {
-#ifdef ENABLE_EVENTRECORDER
-	return g_eventRec.getTimerManager();
-#else
-	return _timerManager;
-#endif
-}

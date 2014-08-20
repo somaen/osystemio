@@ -26,9 +26,7 @@
 #include "backends/platform/sdl/sdl-sys.h"
 
 #include "backends/modular-backend.h"
-#include "backends/mixer/sdl/sdl-mixer.h"
-#include "backends/events/sdl/sdl-events.h"
-#include "backends/log/log.h"
+//#include "backends/log/log.h"
 
 #include "common/array.h"
 
@@ -38,7 +36,7 @@
 class OSystem_SDL : public ModularBackend {
 public:
 	OSystem_SDL();
-	virtual ~OSystem_SDL();
+	virtual ~OSystem_SDL() {};
 
 	/**
 	 * Pre-initialize backend. It should be called after
@@ -47,65 +45,23 @@ public:
 	 */
 	virtual void init();
 
-	/**
-	 * Get the Mixer Manager instance. Not to confuse with getMixer(),
-	 * that returns Audio::Mixer. The Mixer Manager is a SDL wrapper class
-	 * for the Audio::Mixer. Used by other managers.
-	 */
-	virtual SdlMixerManager *getMixerManager();
-
 	// Override functions from ModularBackend and OSystem
 	virtual void initBackend();
-#if defined(USE_TASKBAR)
-	virtual void engineInit();
-	virtual void engineDone();
-#endif
 	virtual void quit();
 	virtual void fatalError();
 
 	// Logging
 	virtual void logMessage(LogMessageType::Type type, const char *message);
 
-	virtual Common::String getSystemLanguage() const;
-
-	virtual void setWindowCaption(const char *caption);
 	virtual void addSysArchivesToSearchSet(Common::SearchSet &s, int priority = 0);
 	virtual uint32 getMillis(bool skipRecord = false);
 	virtual void delayMillis(uint msecs);
 	virtual void getTimeAndDate(TimeDate &td) const;
-	virtual Audio::Mixer *getMixer();
-	virtual Common::TimerManager *getTimerManager();
 
 protected:
 	bool _inited;
-	bool _initedSDL;
 
-	/**
-	 * Mixer manager that configures and setups SDL for
-	 * the wrapped Audio::Mixer, the true mixer.
-	 */
-	SdlMixerManager *_mixerManager;
 
-	/**
-	 * The event source we use for obtaining SDL events.
-	 */
-	SdlEventSource *_eventSource;
-
-	virtual Common::EventSource *getDefaultEventSource() { return _eventSource; }
-
-	/**
-	 * Initialze the SDL library.
-	 */
-	virtual void initSDL();
-
-	/**
-	 * Setup the window icon.
-	 */
-	virtual void setupIcon();
-
-	// Logging
-	virtual Common::WriteStream *createLogFile() { return 0; }
-	Backends::Log::Log *_logger;
 };
 
 #endif

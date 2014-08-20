@@ -23,7 +23,7 @@
 #ifndef BACKENDS_MODULAR_BACKEND_H
 #define BACKENDS_MODULAR_BACKEND_H
 
-#include "backends/base-backend.h"
+#include "common/system.h"
 
 class GraphicsManager;
 class MutexManager;
@@ -44,104 +44,21 @@ class MutexManager;
  * And, it should also initialize all the managers variables
  * declared in this class, or override their related functions.
  */
-class ModularBackend : public BaseBackend {
+class ModularBackend : public OSystem {
 public:
-	ModularBackend();
-	virtual ~ModularBackend();
-
-	/** @name Features */
-	//@{
-
-	virtual bool hasFeature(Feature f);
-	virtual void setFeatureState(Feature f, bool enable);
-	virtual bool getFeatureState(Feature f);
-
-	//@}
-
-	/** @name Graphics */
-	//@{
-
-	virtual GraphicsManager *getGraphicsManager();
-	virtual const GraphicsMode *getSupportedGraphicsModes() const;
-	virtual int getDefaultGraphicsMode() const;
-	virtual bool setGraphicsMode(int mode);
-	virtual int getGraphicsMode() const;
-	virtual void resetGraphicsScale();
-#ifdef USE_RGB_COLOR
-	virtual Graphics::PixelFormat getScreenFormat() const;
-	virtual Common::List<Graphics::PixelFormat> getSupportedFormats() const;
-#endif
-	virtual void initSize(uint width, uint height, const Graphics::PixelFormat *format = NULL);
-	virtual void launcherInitSize(uint w, uint h); // ResidualVM specific method
-	virtual Graphics::PixelBuffer setupScreen(uint screenW, uint screenH, bool fullscreen, bool accel3d); // ResidualVM specific method
-	virtual int getScreenChangeID() const;
-
-	virtual void beginGFXTransaction();
-	virtual OSystem::TransactionError endGFXTransaction();
-
-	virtual int16 getHeight();
-	virtual int16 getWidth();
-	virtual PaletteManager *getPaletteManager();
-	virtual void copyRectToScreen(const void *buf, int pitch, int x, int y, int w, int h);
-	virtual Graphics::Surface *lockScreen();
-	virtual void unlockScreen();
-	virtual void fillScreen(uint32 col);
-	virtual void updateScreen();
-	virtual void setShakePos(int shakeOffset);
-	virtual void setFocusRectangle(const Common::Rect& rect);
-	virtual void clearFocusRectangle();
-
-	virtual void showOverlay();
-	virtual void hideOverlay();
-	virtual Graphics::PixelFormat getOverlayFormat() const;
-	virtual void clearOverlay();
-	virtual void grabOverlay(void *buf, int pitch);
-	virtual void copyRectToOverlay(const void *buf, int pitch, int x, int y, int w, int h);
-	virtual int16 getOverlayHeight();
-	virtual int16 getOverlayWidth();
-
-	virtual bool showMouse(bool visible);
-	virtual void warpMouse(int x, int y);
-	virtual void setMouseCursor(const void *buf, uint w, uint h, int hotspotX, int hotspotY, uint32 keycolor, bool dontScale = false, const Graphics::PixelFormat *format = NULL);
-	virtual void setCursorPalette(const byte *colors, uint start, uint num);
-	virtual bool lockMouse(bool lock); // ResidualVM specific method
-
-	//@}
-
-	/** @name Mutex handling */
-	//@{
-
-	virtual MutexRef createMutex();
-	virtual void lockMutex(MutexRef mutex);
-	virtual void unlockMutex(MutexRef mutex);
-	virtual void deleteMutex(MutexRef mutex);
-
-	//@}
-
-	/** @name Sound */
-	//@{
-
-	virtual Audio::Mixer *getMixer();
+	ModularBackend() {};
+	virtual ~ModularBackend() {};
 
 	//@}
 
 	/** @name Miscellaneous */
 	//@{
-
+	virtual void initBackend();
 	virtual void quit();
-	virtual void displayMessageOnOSD(const char *msg);
 
 	//@}
 
 protected:
-	/** @name Managers variables */
-	//@{
-
-	MutexManager *_mutexManager;
-	GraphicsManager *_graphicsManager;
-	Audio::Mixer *_mixer;
-
-	//@}
 };
 
 #endif

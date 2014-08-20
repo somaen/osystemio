@@ -31,8 +31,6 @@ public:
 	OSystem_POSIX(Common::String baseConfigName = ".residualvmrc");
 	virtual ~OSystem_POSIX() {}
 
-	virtual bool hasFeature(Feature f);
-
 	virtual bool displayLogFile();
 
 	virtual void init();
