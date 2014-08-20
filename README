@@ -1,0 +1,31 @@
+This is a fork of the Common-code used in ScummVM/ResidualVM,
+specifically this is a fork of how ResidualVM looked on 2014-08-20.
+
+The intention of this fork, is to have a usable I/O system for file access,
+that still uses the same functions that ScummVM/ResidualVM uses, thus easing
+the creation of tools outside ScummVM/ResidualVM (as there is no need to fire
+up the graphics/audio/etc-stuff, just to read files, and use the Common data
+structures).
+
+What's removed:
+* All the actual SDL-code (so, no way to display graphics)
+* Mixer code is not included.
+* And possibly a bunch of other stuff.
+
+Currently there is no build system in place, and the endian-handling avoids
+using SDL_endian.h, so it is neccessary to define 
+POSIX
+SCUMM_LITTLE_ENDIAN (or SCUMM_BIG_ENDIAN)
+SDL_BACKEND
+to be able to compile.
+
+To use, remember to first call:
+Common::initOSystem()
+
+When your program finishes, call:
+Common::deinitOSystem()
+
+Which is also nice enough to call exit(0) for you.
+
+Anyhow, this is probably not usable for anything other than experimentation with
+the ScummVM APIs.
